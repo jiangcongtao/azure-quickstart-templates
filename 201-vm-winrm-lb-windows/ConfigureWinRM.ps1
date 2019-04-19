@@ -8,7 +8,8 @@
 
 param
 (
-    [string] $hostname
+    [string] $hostname,
+    [string] $adminUserName
 )
 
 #################################################################################################################################
@@ -39,8 +40,23 @@ function Delete-WinRMListener
 function Configure-WinRMHttpsListener
 {
     param([string] $hostname,
-          [string] $port)
+          [string] $port,
+          [string] $adminUserName)
+    
+    # Edit by  by Nick -- begin
+    # Enable Web-Server feature
+    Install-WindowsFeature -name Web-Server -IncludeManagementTools 
 
+    # Provision PKI website simulating website deployment
+    if ( -Not (Test-Path c:\inetpub\wwwroot\pki-website) ) {
+        mkdir c:\inetpub\wwwroot\pki-website
+    }else {
+        Write-Output "Found the folder c:\inetpub\wwwroot\pki-website"
+    }
+    
+    Add-LocalGroupMember -Group "Remote Management Users" -Member $adminUserName
+     # Edit by  by Nick -- end
+     
     # Delete the WinRM Https listener if it is already configured
     Delete-WinRMListener
 
@@ -83,7 +99,7 @@ $winrmHttpsPort=5986
 winrm set winrm/config '@{MaxEnvelopeSizekb = "8192"}'
 
 # Configure https listener
-Configure-WinRMHttpsListener $hostname $port
+Configure-WinRMHttpsListener $hostname $port $adminUserName
 
 # Add firewall exception
 Add-FirewallException -port $winrmHttpsPort
